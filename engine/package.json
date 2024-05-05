@@ -1,0 +1,12 @@
+{
+  "type": "module",
+  "dependencies": {
+    "express": "^4.19.2",
+    "json-rules-engine": "^6.5.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  },
+  "scripts": {
+    "start": "nodemon app.js"
+  }
+}

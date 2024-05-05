@@ -1,11 +1,18 @@
 const selectConditionQuery = "SELECT * FROM conditions WHERE id = ?";
 const selectConditionsQuery = "SELECT * FROM conditions";
-const insertConditionQuery = 'INSERT INTO conditions(name,condition) VALUES(?, json(?)) ON CONFLICT(name) DO UPDATE SET condition=excluded.condition';
+const insertConditionQuery = `INSERT INTO conditions(created, modified, name, condition)
+	VALUES(CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, json(?))
+	ON CONFLICT(name) DO UPDATE SET condition=excluded.condition, modified=CURRENT_TIMESTAMP`;
 const deleteConditionQuery = 'DELETE FROM conditions WHERE id = ?';
 
 export function mapConditionRoutes(app, db) {
 	app.get("/conditions/:id", async (req, res) => {
 		const result = await db.get(selectConditionQuery, req.params.id);
+		if (result == undefined) {
+			res.sendStatus(404);
+			return;
+		}
+
 		result.condition = JSON.parse(result.condition);
 		res.send(result);
 	});

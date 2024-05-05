@@ -2,34 +2,43 @@ import { createProductEngine } from '../engine.js';
 
 const selectProductQuery = "SELECT * FROM products WHERE id = ?";
 const selectProductsQuery = "SELECT * FROM products";
-const insertProductQuery = 'INSERT INTO products(name, product_info, live) VALUES(?, json(?), ?) ON CONFLICT(name) DO UPDATE SET product_info=excluded.product_info, live=excluded.live';
+const insertProductQuery = `INSERT INTO products(created, modified, name, productInfo)
+	VALUES(CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, json(?))
+	ON CONFLICT(name) DO UPDATE SET productInfo=excluded.productInfo, modified=CURRENT_TIMESTAMP`;
 const deleteProductQuery = 'DELETE FROM products WHERE id = ?';
 
 export function mapProductRoutes(app, db) {
 	// get list of eligible products using rules engine
 	app.post("/products/eligible", async (req, res) => {
-		const engine = await createProductEngine(db);
-		const result = await engine.run(req.body);
-		res.send({
-			results: result.results,
-			failureResults: result.failureResults,
-			events: result.events,
-			failureEvents: result.failureEvents
-		});
+		try {
+			const engine = await createProductEngine(db);
+			const result = await engine.run(req.body);
+			res.send({
+				results: result.results,
+				failureResults: result.failureResults,
+				events: result.events,
+				failureEvents: result.failureEvents
+			});
+		} catch (error) {
+			res.status(500).send(error.message);
+		}
 	});
 
 	app.get("/products/:id", async (req, res) => {
 		const result = await db.get(insertProductQuery, req.params.id);
-		result.productInfo = JSON.parse(result.product_info)
-		delete result.product_info;
+		if (result == undefined) {
+			res.sendStatus(404);
+			return;
+		}
+
+		result.productInfo = JSON.parse(result.productInfo)
 		res.send(result);
 	});
 
 	app.get("/products", async (req, res) => {
 		const results = await db.all(selectProductsQuery);
 		results.forEach(result => {
-			result.productInfo = JSON.parse(result.product_info)
-			delete result.product_info;
+			result.productInfo = JSON.parse(result.productInfo)
 		});
 		res.send(results);
 	});
